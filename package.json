@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "ajv": "^7.2.4"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "mongoose": "^8.9.2",
+    "react-scripts": "^5.0.1"
+  }
+}
