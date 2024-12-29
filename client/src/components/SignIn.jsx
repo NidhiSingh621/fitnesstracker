@@ -65,7 +65,7 @@ const SignIn = () => {
         // Save token to localStorage for future use (if necessary)
         localStorage.setItem('token', token); // Store token in localStorage
         console.log("Token saved to localStorage");
-  
+  alert("login success");
         // Dispatch user data to Redux store
         dispatch(loginSuccess(user));
      
