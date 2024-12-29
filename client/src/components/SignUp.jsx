@@ -41,23 +41,38 @@ const SignUp = () => {
   };
 
   const handelSignUp = async () => {
+    if (!validateInputs()) return;
+
     setLoading(true);
     setButtonDisabled(true);
-    if (validateInputs()) {
-      await UserSignUp({ name, email, password })
-        .then((res) => {
-          dispatch(loginSuccess(res.data));
-          alert("Account Created Success");
-          setLoading(false);
-          setButtonDisabled(false);
-        })
-        .catch((err) => {
-          alert(err.response.data.message);
-          setLoading(false);
-          setButtonDisabled(false);
-        });
+
+    try {
+      const res = await UserSignUp({ name, email, password });
+      console.log("API Response:", res); // Log response to debug structure
+
+      if (res && res.token && res.user) {
+        const { token, user } = res;
+        
+        // Store token in localStorage (optional)
+        localStorage.setItem('token', token);
+
+        // Dispatch user data to Redux store
+        dispatch(loginSuccess(user));
+
+        alert("Account Created Successfully");
+      } else {
+        throw new Error("Invalid response structure");
+      }
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || err.message || "An error occurred";
+      alert(errorMessage); // Show appropriate error message
+    } finally {
+      setLoading(false);
+      setButtonDisabled(false);
     }
   };
+
   return (
     <Container>
       <div>

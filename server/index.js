@@ -6,6 +6,7 @@ import UserRoutes from "./routes/User.js";
 import router from "./routes/User.js";
 
 dotenv.config();
+console.log("JWT_SECRET:", process.env.JWT_SECRET);
 
 const app = express();
 
@@ -43,14 +44,20 @@ app.use((err,req,res,next) => {
 });
 
 // Connect to MongoDB
-const connectDB = () => {
-  mongoose.set("strictQuery", true);
-  mongoose
-    .connect("mongodb+srv://Nidhi:1234@cluster0.ttklc9i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", { useNewUrlParser: true, useUnifiedTopology: true }) // Optional settings
-    .then(() => console.log("Connected to MongoDB"))
-    .catch((err) => {
-      console.error("MongoDB connection error:", err.message);
-    });
+const connectDB = async () => {
+  try {
+    console.log("Attempting to connect to MongoDB..."); // Log instead of alert
+    mongoose.set("strictQuery", true);
+
+    await mongoose.connect(
+      "mongodb+srv://himanshuu932:88087408601@cluster0.lu2g8bw.mongodb.net/test1?retryWrites=true&w=majority&appName=Cluster0",
+      { useNewUrlParser: true, useUnifiedTopology: true }
+    );
+
+    console.log("Connected to MongoDB"); // Successful connection
+  } catch (err) {
+    console.error("MongoDB connection error:", err.message); // Catch and log errors
+  }
 };
 
 // Server Start Function

@@ -13,11 +13,13 @@ const Container = styled.div`
   flex-direction: column;
   gap: 36px;
 `;
+
 const Title = styled.div`
   font-size: 30px;
   font-weight: 800;
   color: ${({ theme }) => theme.text_primary};
 `;
+
 const Span = styled.div`
   font-size: 16px;
   font-weight: 400;
@@ -31,32 +33,57 @@ const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Function to validate user input
   const validateInputs = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !password) {
       alert("Please fill in all fields");
+      return false;
+    }
+    if (!emailRegex.test(email)) {
+      alert("Please enter a valid email address");
       return false;
     }
     return true;
   };
 
   const handelSignIn = async () => {
+    if (!validateInputs()) return;
+  
     setLoading(true);
     setButtonDisabled(true);
-    if (validateInputs()) {
-      await UserSignIn({ email, password })
-        .then((res) => {
-          dispatch(loginSuccess(res.data));
-          alert("Login Success");
-          setLoading(false);
-          setButtonDisabled(false);
-        })
-        .catch((err) => {
-          alert(err.response.data.message);
-          setLoading(false);
-          setButtonDisabled(false);
-        });
+  
+    try {
+      const res = await UserSignIn({ email, password });
+  
+     // Log full response for debugging
+  
+      // Check if the response contains both token and user data
+      if (res && res.token && res.user) {
+        const { token, user } = res;
+  
+        // Save token to localStorage for future use (if necessary)
+        localStorage.setItem('token', token); // Store token in localStorage
+        console.log("Token saved to localStorage");
+  
+        // Dispatch user data to Redux store
+        dispatch(loginSuccess(user));
+     
+      } else {
+        alert("No token or user data in response");
+      }
+    } catch (err) {
+      console.log("Error:", err);  // Log error for debugging
+      const errorMessage =
+        err.response?.data?.message || err.message || "An unexpected error occurred";
+      alert(errorMessage); // Show error message to the user
+    } finally {
+      setLoading(false);
+      setButtonDisabled(false);
     }
   };
+  
+
 
   return (
     <Container>

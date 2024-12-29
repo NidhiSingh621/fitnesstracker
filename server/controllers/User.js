@@ -7,10 +7,18 @@ import Workout from "../models/Workout.js";
 
 dotenv.config();
 
+const generateToken = (userId) => {
+ 
+  const secretKey = process.env.JWT_SECRET;
+  if (!secretKey) {
+    throw new Error("JWT_SECRET is not defined in environment variables");
+  }
+  return jwt.sign({ id: userId }, secretKey, { expiresIn: "9999 years" });
+};
 export const UserRegister = async (req, res, next) => {
   try {
     const { email, password, name, img } = req.body;
-
+   
     // Check if the email is in use
     const existingUser = await User.findOne({ email }).exec();
     if (existingUser) {
@@ -27,11 +35,11 @@ export const UserRegister = async (req, res, next) => {
       img,
     });
     const createdUser = await user.save();
-    const token = jwt.sign({ id: createdUser._id }, process.env.JWT, {
-      expiresIn: "9999 years",
-    });
+    const token = generateToken(user._id);
+    console.log(user);
     return res.status(200).json({ token, user });
   } catch (error) {
+    
     return next(error);
   }
 };
@@ -52,12 +60,13 @@ export const UserLogin = async (req, res, next) => {
       return next(createError(403, "Incorrect password"));
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT, {
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "9999 years",
     });
 
     return res.status(200).json({ token, user });
   } catch (error) {
+    
     return next(error);
   }
 };

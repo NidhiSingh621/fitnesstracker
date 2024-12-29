@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { ThemeProvider } from "styled-components";
 import { lightTheme } from "./utils/Theme";
-import { BrowserRouter , Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import styled from "styled-components";
 import Authentication from "./pages/Authentication";
 import Navbar from "./components/Navbar";
@@ -22,27 +22,24 @@ const Container = styled.div`
 `;
 
 function App() {
-  const {currentUser} = useSelector((state) => state.user)
+  const { currentUser } = useSelector((state) => state.user);
+
   return (
     <ThemeProvider theme={lightTheme}>
       <BrowserRouter>
-      {currentUser ? (
-        <container>
-          <Navbar currentUser={currentUser}/>
-          <Routes>
-            <Route path = "/" exact element={<Dashboard/>}/>
-            <Route path = "/workouts" exact element={<Workouts/>}/>
-
-          </Routes>
-        </container>
-      ):(
-<Container>
-          <Authentication /> {/* Use Authentication with capital A */}
-        </Container>
-
-      )}
-      
-       
+        {currentUser ? (
+          <Container>
+            <Navbar currentUser={currentUser} />
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/workouts" element={<Workouts />} />
+            </Routes>
+          </Container>
+        ) : (
+          <Container>
+            <Authentication />
+          </Container>
+        )}
       </BrowserRouter>
     </ThemeProvider>
   );
