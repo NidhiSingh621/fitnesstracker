@@ -66,7 +66,7 @@ const SignIn = ({setcurrentuser}) => {
         //dispatch(loginSuccess(user));
         console.log("User dispatched to Redux:", user);
   
-     alert(user.name);
+     //alert(user.name);
      setcurrentuser(user);
         console.log("Navigating to /dashboard");
       } else {
