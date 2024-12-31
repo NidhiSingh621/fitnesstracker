@@ -4,8 +4,7 @@ import styled from "styled-components";
 import TextInput from "./TextInput";
 import Button from "./Button";
 import { UserSignUp } from "../api";
-import { useDispatch } from "react-redux";
-import { loginSuccess } from "../redux/reducers/userSlice";
+
 
 const Container = styled.div`
   width: 100%;
@@ -26,7 +25,7 @@ const Span = styled.div`
 `;
 
 const SignUp = () => {
-  const dispatch = useDispatch();
+ // const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [buttonDisabled, setButtonDisabled] = useState(false);
   const [name, setName] = useState("");
@@ -58,7 +57,7 @@ const SignUp = () => {
         localStorage.setItem('token', token);
 
         // Dispatch user data to Redux store
-        dispatch(loginSuccess(user));
+        //dispatch(loginSuccess(user));
 
         alert("Account Created Successfully");
       } else {

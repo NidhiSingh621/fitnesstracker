@@ -7,7 +7,7 @@ import Authentication from "./pages/Authentication";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Workouts from "./pages/Workouts";
-import { useSelector } from "react-redux";
+
 
 // Define your styled Container component
 const Container = styled.div`
@@ -24,21 +24,14 @@ const Container = styled.div`
 function App() {
   const [ currentUser,setcurrentuser ] = useState(null);
 
-  // Debugging effect to track when currentUser changes
-  useEffect(() => {
-    if (currentUser) {
-      alert("User has logged in: " + JSON.stringify(currentUser));
-    } else {
-      alert("User has logged out or is not authenticated.");
-    }
-  }, [currentUser]); // Dependency on currentUser to trigger effect
+  // Dependency on currentUser to trigger effect
 
   return (
     <ThemeProvider theme={lightTheme}>
       <BrowserRouter>
         {currentUser ? (
           <Container>
-            <Navbar currentUser={currentUser} />
+            <Navbar currentUser={currentUser} setcurrentuser={setcurrentuser}/>
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/workouts" element={<Workouts />} />

@@ -3,10 +3,8 @@ import styled from "styled-components";
 import TextInput from "./TextInput";
 import Button from "./Button";
 import { UserSignIn } from "../api";
-import { useDispatch } from "react-redux";
-import { loginSuccess } from "../redux/reducers/userSlice";
-import { useNavigate } from "react-router-dom"; // Import useNavigate for redirection
 
+import { useNavigate } from "react-router-dom"; 
 const Container = styled.div`
   width: 100%;
   max-width: 500px;
@@ -28,7 +26,7 @@ const Span = styled.div`
 `;
 
 const SignIn = ({setcurrentuser}) => {
-  const dispatch = useDispatch();
+ // const dispatch = useDispatch();
   const navigate = useNavigate(); // Initialize useNavigate
   const [loading, setLoading] = useState(false);
   const [buttonDisabled, setButtonDisabled] = useState(false);
@@ -65,7 +63,7 @@ const SignIn = ({setcurrentuser}) => {
         localStorage.setItem("token", token);
         console.log("Token saved to localStorage:", localStorage.getItem("token"));
   
-        dispatch(loginSuccess(user));
+        //dispatch(loginSuccess(user));
         console.log("User dispatched to Redux:", user);
   
      alert(user.name);

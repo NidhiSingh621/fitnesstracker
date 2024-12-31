@@ -5,8 +5,8 @@ import { Link as LinkR, NavLink } from "react-router-dom";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { Avatar } from "@mui/material";
-import {useDispatch} from "react-redux";
-import { logout } from "../redux/reducers/userSlice";
+
+
 
 const Nav = styled.div`
   background-color: ${({ theme }) => theme.bg || "#fff"};
@@ -142,8 +142,8 @@ const TextButton = styled.div`
   }
 `;
 
-const Navbar = ({currentUser}) => {
-  const dispatch = useDispatch();
+const Navbar = ({currentUser,setcurrentuser}) => {
+  //const dispatch = useDispatch();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -188,7 +188,7 @@ const Navbar = ({currentUser}) => {
         </NavItems>
         <UserContainer>
         <Avatar src={currentUser?.img}>{currentUser?.name[0]}</Avatar>
-          <TextButton onClick={() => dispatch(logout())}>Logout</TextButton>
+          <TextButton onClick={() => setcurrentuser(null)}>Logout</TextButton>
         </UserContainer>
       </NavContainer>
     </Nav>
