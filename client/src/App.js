@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState,useEffect } from "react";
 import { ThemeProvider } from "styled-components";
 import { lightTheme } from "./utils/Theme";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -22,7 +22,16 @@ const Container = styled.div`
 `;
 
 function App() {
-  const { currentUser } = useSelector((state) => state.user);
+  const [ currentUser,setcurrentuser ] = useState(null);
+
+  // Debugging effect to track when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      alert("User has logged in: " + JSON.stringify(currentUser));
+    } else {
+      alert("User has logged out or is not authenticated.");
+    }
+  }, [currentUser]); // Dependency on currentUser to trigger effect
 
   return (
     <ThemeProvider theme={lightTheme}>
@@ -37,7 +46,7 @@ function App() {
           </Container>
         ) : (
           <Container>
-            <Authentication />
+            <Authentication setcurrentuser={setcurrentuser}/>
           </Container>
         )}
       </BrowserRouter>

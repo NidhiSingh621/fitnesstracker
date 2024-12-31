@@ -5,6 +5,7 @@ import Button from "./Button";
 import { UserSignIn } from "../api";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../redux/reducers/userSlice";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for redirection
 
 const Container = styled.div`
   width: 100%;
@@ -26,8 +27,9 @@ const Span = styled.div`
   color: ${({ theme }) => theme.text_secondary + 90};
 `;
 
-const SignIn = () => {
+const SignIn = ({setcurrentuser}) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate(); // Initialize useNavigate
   const [loading, setLoading] = useState(false);
   const [buttonDisabled, setButtonDisabled] = useState(false);
   const [email, setEmail] = useState("");
@@ -55,35 +57,34 @@ const SignIn = () => {
   
     try {
       const res = await UserSignIn({ email, password });
+      console.log("API Response:", res);
   
-     // Log full response for debugging
-  
-      // Check if the response contains both token and user data
       if (res && res.token && res.user) {
         const { token, user } = res;
   
-        // Save token to localStorage for future use (if necessary)
-        localStorage.setItem('token', token); // Store token in localStorage
-        console.log("Token saved to localStorage");
-  alert("login success");
-        // Dispatch user data to Redux store
+        localStorage.setItem("token", token);
+        console.log("Token saved to localStorage:", localStorage.getItem("token"));
+  
         dispatch(loginSuccess(user));
-     
+        console.log("User dispatched to Redux:", user);
+  
+     alert(user.name);
+     setcurrentuser(user);
+        console.log("Navigating to /dashboard");
       } else {
         alert("No token or user data in response");
       }
     } catch (err) {
-      console.log("Error:", err);  // Log error for debugging
-      const errorMessage =
-        err.response?.data?.message || err.message || "An unexpected error occurred";
-      alert(errorMessage); // Show error message to the user
+      console.error("Error during sign-in:", err);
+      alert(
+        err.response?.data?.message || err.message || "An unexpected error occurred"
+      );
     } finally {
       setLoading(false);
       setButtonDisabled(false);
     }
   };
   
-
 
   return (
     <Container>

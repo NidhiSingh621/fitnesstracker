@@ -1,4 +1,3 @@
-
 import React from "react";
 import styled from "styled-components";
 
@@ -54,10 +53,8 @@ const Span = styled.div`
 
   ${({ positive, theme }) =>
     positive
-      ? `
-  color: ${theme.green};`
-      : `
-  color: ${theme.red};`}
+      ? `color: ${theme.green};`
+      : `color: ${theme.red};`}
 `;
 const Icon = styled.div`
   height: fit-content;
@@ -67,8 +64,8 @@ const Icon = styled.div`
   justify-content: center;
   border-radius: 12px;
   ${({ color, bg }) => `
-  background: ${bg};
-  color: ${color};
+    background: ${bg};
+    color: ${color};
   `}
 `;
 
@@ -82,16 +79,20 @@ const Desc = styled.div`
 `;
 
 const CountsCard = ({ item, data }) => {
+  // Safely access the value and provide a fallback of 0.00 if undefined
+  const value = data?.[item.key] ? data[item.key].toFixed(2) : "0.00";
+
   return (
     <Card>
       <Left>
         <Title>{item.name}</Title>
         <Value>
-          {data && data[item.key].toFixed(2)}
+          {value}
           <Unit>{item.unit}</Unit>
+          {/* Example Span with hardcoded positive change, replace with dynamic if needed */}
           <Span positive>(+10%)</Span>
         </Value>
-        <Desc>{item.desc}</Desc>
+        <Desc>{item.desc || "No description provided"}</Desc>
       </Left>
       <Icon color={item.color} bg={item.lightColor}>
         {item.icon}

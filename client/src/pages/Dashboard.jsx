@@ -16,6 +16,7 @@ const Container = styled.div`
   padding: 22px 0px;
   overflow-y: scroll;
 `;
+
 const Wrapper = styled.div`
   flex: 1;
   max-width: 1400px;
@@ -26,12 +27,14 @@ const Wrapper = styled.div`
     gap: 12px;
   }
 `;
+
 const Title = styled.div`
   padding: 0px 16px;
   font-size: 22px;
   color: ${({ theme }) => theme.text_primary};
   font-weight: 500;
 `;
+
 const FlexWrap = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -42,16 +45,17 @@ const FlexWrap = styled.div`
     gap: 12px;
   }
 `;
+
 const Section = styled.div`
   display: flex;
   flex-direction: column;
   padding: 0px 16px;
   gap: 22px;
-  padding: 0px 16px;
   @media (max-width: 600px) {
     gap: 12px;
   }
 `;
+
 const CardWrapper = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -65,7 +69,7 @@ const CardWrapper = styled.div`
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState();
+  const [data, setData] = useState(null); // Default to null for clarity
   const [buttonLoading, setButtonLoading] = useState(false);
   const [todaysWorkouts, setTodaysWorkouts] = useState([]);
   const [workout, setWorkout] = useState(`#Legs
@@ -77,47 +81,57 @@ const Dashboard = () => {
   const dashboardData = async () => {
     setLoading(true);
     const token = localStorage.getItem("fittrack-app-token");
-    await getDashboardDetails(token).then((res) => {
-      setData(res.data);
-      console.log(res.data);
+    try {
+      const res = await getDashboardDetails(token);
+      setData(res?.data || {});
+      console.log("Dashboard Data:", res?.data);
+    } catch (error) {
+      console.error("Error fetching dashboard details:", error);
+    } finally {
       setLoading(false);
-    });
+    }
   };
+
   const getTodaysWorkout = async () => {
     setLoading(true);
     const token = localStorage.getItem("fittrack-app-token");
-    await getWorkouts(token, "").then((res) => {
-      setTodaysWorkouts(res?.data?.todaysWorkouts);
-      console.log(res.data);
+    try {
+      const res = await getWorkouts(token, "");
+      setTodaysWorkouts(res?.data?.todaysWorkouts || []);
+      console.log("Today's Workouts:", res?.data);
+    } catch (error) {
+      console.error("Error fetching today's workouts:", error);
+    } finally {
       setLoading(false);
-    });
+    }
   };
 
   const addNewWorkout = async () => {
     setButtonLoading(true);
     const token = localStorage.getItem("fittrack-app-token");
-    await addWorkout(token, { workoutString: workout })
-      .then((res) => {
-        dashboardData();
-        getTodaysWorkout();
-        setButtonLoading(false);
-      })
-      .catch((err) => {
-        alert(err);
-      });
+    try {
+      await addWorkout(token, { workoutString: workout });
+      dashboardData();
+      getTodaysWorkout();
+    } catch (error) {
+      alert("Error adding workout:", error);
+    } finally {
+      setButtonLoading(false);
+    }
   };
 
   useEffect(() => {
     dashboardData();
     getTodaysWorkout();
   }, []);
+
   return (
     <Container>
       <Wrapper>
         <Title>Dashboard</Title>
         <FlexWrap>
-          {counts.map((item) => (
-            <CountsCard item={item} data={data} />
+          {Array.isArray(counts) && counts.map((item, index) => (
+            <CountsCard key={index} item={item} data={data} />
           ))}
         </FlexWrap>
 
@@ -135,8 +149,8 @@ const Dashboard = () => {
         <Section>
           <Title>Todays Workouts</Title>
           <CardWrapper>
-            {todaysWorkouts.map((workout) => (
-              <WorkoutCard workout={workout} />
+            {Array.isArray(todaysWorkouts) && todaysWorkouts.map((workout, index) => (
+              <WorkoutCard key={index} workout={workout} />
             ))}
           </CardWrapper>
         </Section>

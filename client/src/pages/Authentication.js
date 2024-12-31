@@ -63,7 +63,7 @@ const TextButton = styled.span`
   font-weight: 600;
 `;
 
-const Authentication = () => {
+const Authentication = ({setcurrentuser}) => {
   const [login, setLogin] = useState(false);
   return (
     <Container>
@@ -74,7 +74,7 @@ const Authentication = () => {
       <Right>
         {!login ? (
           <>
-            <SignIn />
+            <SignIn setcurrentuser={setcurrentuser} />
             <Text>
               Don't have an account?{" "}
               <TextButton onClick={() => setLogin(true)}>SignUp</TextButton>
