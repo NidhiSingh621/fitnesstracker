@@ -31,8 +31,10 @@ export const getDashboardDetails = async (token) => {
     const response = await API.get("/user/dashboard", {
       headers: { Authorization: `Bearer ${token}` },
     });
+     // Log the response
     return response.data;
   } catch (error) {
+    console.error("Error fetching dashboard details:", error);
     throw error.response ? error.response.data : { message: "Network error" };
   }
 };
@@ -40,9 +42,11 @@ export const getDashboardDetails = async (token) => {
 // Get Workouts for a Specific Date
 export const getWorkouts = async (token, date) => {
   try {
+    
     const response = await API.get(`/user/workout?date=${date}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+   
     return response.data;
   } catch (error) {
     throw error.response ? error.response.data : { message: "Network error" };
@@ -52,11 +56,15 @@ export const getWorkouts = async (token, date) => {
 // Add Workout
 export const addWorkout = async (token, data) => {
   try {
+   // alert("Sending workout data..."); // Optional: Add an alert before sending data
     const response = await API.post(`/user/workout`, data, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   } catch (error) {
-    throw error.response ? error.response.data : { message: "Network error" };
+    // Check for an error response, or if none, use a default error message
+    const errorMessage = error.response?.data?.message || "Network error";
+    throw new Error(errorMessage); // Throw the error to be caught in the outer try-catch
   }
 };
+

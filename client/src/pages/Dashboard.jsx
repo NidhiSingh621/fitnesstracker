@@ -55,6 +55,16 @@ const Section = styled.div`
     gap: 12px;
   }
 `;
+const Heading = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content:space-between;
+  padding: 0px 16px;
+  gap: 22px;
+  @media (max-width: 600px) {
+    gap: 12px;
+  }
+`;
 
 const CardWrapper = styled.div`
   display: flex;
@@ -67,9 +77,25 @@ const CardWrapper = styled.div`
   }
 `;
 
+
+
+const RefreshButton = styled.button`
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+`;
+
 const Dashboard = () => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null); // Default to null for clarity
+  const [data, setData] = useState(null);
   const [buttonLoading, setButtonLoading] = useState(false);
   const [todaysWorkouts, setTodaysWorkouts] = useState([]);
   const [workout, setWorkout] = useState(`#Legs
@@ -78,46 +104,75 @@ const Dashboard = () => {
 -30 kg
 -10 min`);
 
-  const dashboardData = async () => {
-    setLoading(true);
-    const token = localStorage.getItem("fittrack-app-token");
-    try {
-      const res = await getDashboardDetails(token);
-      setData(res?.data || {});
-      console.log("Dashboard Data:", res?.data);
-    } catch (error) {
-      console.error("Error fetching dashboard details:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const dashboardData = async () => {
+  setLoading(true);
+  const token = localStorage.getItem("token");
+  try {
+    const res = await getDashboardDetails(token);
+    // Log the fetched data to console
+   // alert(`Total Calories Burnt Today: ${res.totalCaloriesBurnt}\nTotal Workouts: ${res.totalWorkouts}\nAverage Calories Burnt per Workout: ${res.avgCaloriesBurntPerWorkout}`);
+    setData(res);
+  } catch (error) {
+    console.error("Error fetching dashboard details:", error);
+    alert("Error fetching dashboard details: " + error.message);  // Alert on error
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const getTodaysWorkout = async () => {
-    setLoading(true);
-    const token = localStorage.getItem("fittrack-app-token");
-    try {
-      const res = await getWorkouts(token, "");
-      setTodaysWorkouts(res?.data?.todaysWorkouts || []);
-      console.log("Today's Workouts:", res?.data);
-    } catch (error) {
-      console.error("Error fetching today's workouts:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+const getTodaysWorkout = async () => {
+  setLoading(true);
+
+  // Get the token from localStorage
+  const token = localStorage.getItem("token");
+
+  // Get today's date in local time
+  const today = new Date();
+  
+  // Format the date as YYYY-MM-DD
+  const dateString = today.toISOString().split('T')[0];  // Ensure it's in the correct date format
+  
+  // If you need to adjust for timezone (if required by your backend), you can do so here
+  const localDateString = today.toLocaleDateString("en-CA");  // This will give YYYY-MM-DD format, adjusted for the local time zone.
+  
+   // Check if this date is correct based on your local timezone.
+  
+  try {
+    // Pass the token and the formatted date to getWorkouts
+    const res = await getWorkouts(token, localDateString);
+
+    // Assuming the response structure includes 'todaysWorkouts'
+    setTodaysWorkouts(res.todaysWorkouts || []);
+    console.log("Today's Workouts:", res.todaysWorkouts);
+  } catch (error) {
+    console.error("Error fetching today's workouts:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const addNewWorkout = async () => {
     setButtonLoading(true);
-    const token = localStorage.getItem("fittrack-app-token");
+    const token = localStorage.getItem("token");
+  
     try {
       await addWorkout(token, { workoutString: workout });
       dashboardData();
       getTodaysWorkout();
     } catch (error) {
-      alert("Error adding workout:", error);
+      const errorMessage = error.message || "An unknown error occurred"; // Get the error message
+      alert(`${errorMessage}`); // Display the error message after the initial text
     } finally {
       setButtonLoading(false);
     }
+  };
+  
+
+  const refreshTodaysWorkout = () => {
+    // Refresh workouts by calling getTodaysWorkout again
+    getTodaysWorkout();
   };
 
   useEffect(() => {
@@ -147,7 +202,14 @@ const Dashboard = () => {
         </FlexWrap>
 
         <Section>
+          <Heading>
           <Title>Todays Workouts</Title>
+        
+            <RefreshButton onClick={refreshTodaysWorkout} disabled={loading}>
+              {loading ? "Refreshing..." : "Refresh Today's Workouts"}
+            </RefreshButton>
+          
+          </Heading>
           <CardWrapper>
             {Array.isArray(todaysWorkouts) && todaysWorkouts.map((workout, index) => (
               <WorkoutCard key={index} workout={workout} />

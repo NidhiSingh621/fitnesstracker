@@ -26,15 +26,19 @@ const Title = styled.div`
 `;
 
 const WeeklyStatCard = ({ data }) => {
+  // Ensure data is available and format it correctly for the chart
+  const chartData = data?.weeklyCaloriesBurned || [];
+
+  const days = chartData.map((entry) => entry.day); // Extracting days
+  const caloriesBurned = chartData.map((entry) => entry.calories); // Extracting calories burned for each day
+
   return (
     <Card>
       <Title>Weekly Calories Burned</Title>
-      {data?.totalWeeksCaloriesBurnt && (
+      {chartData.length > 0 && (
         <BarChart
-          xAxis={[
-            { scaleType: "band", data: data?.totalWeeksCaloriesBurnt?.weeks },
-          ]}
-          series={[{ data: data?.totalWeeksCaloriesBurnt?.caloriesBurned }]}
+          xAxis={[{ scaleType: "band", data: days }]} // Set days as x-axis labels
+          series={[{ data: caloriesBurned }]} // Set calories burned for each day in series
           height={300}
         />
       )}
