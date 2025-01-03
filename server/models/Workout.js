@@ -1,5 +1,12 @@
-
 import mongoose from "mongoose";
+
+// Custom function to get current local time
+function getLocalTime() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset(); // Get the timezone offset in minutes
+  now.setMinutes(now.getMinutes() - offset); // Adjust to local timezone
+  return now;
+}
 
 const WorkoutSchema = new mongoose.Schema(
   {
@@ -34,7 +41,7 @@ const WorkoutSchema = new mongoose.Schema(
     },
     date: {
       type: Date,
-      default: Date.now,
+      default: getLocalTime, // Use the custom function to get local time
     },
   },
   { timestamps: true }

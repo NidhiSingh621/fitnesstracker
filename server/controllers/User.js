@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { createError } from "../error.js";
 import User from "../models/User.js";
 import Workout from "../models/Workout.js";
-
+import mongoose from "mongoose";
 dotenv.config();
 
 const generateToken = (userId) => {
@@ -15,6 +15,7 @@ const generateToken = (userId) => {
   }
   return jwt.sign({ id: userId }, secretKey, { expiresIn: "9999 years" });
 };
+
 export const UserRegister = async (req, res, next) => {
   try {
     const { email, password, name, img } = req.body;
@@ -53,7 +54,7 @@ export const UserLogin = async (req, res, next) => {
     if (!user) {
       return next(createError(404, "User not found"));
     }
-    console.log(user);
+    
     // Check if password is correct
     const isPasswordCorrect = await bcrypt.compareSync(password, user.password);
     if (!isPasswordCorrect) {
@@ -73,230 +74,263 @@ export const UserLogin = async (req, res, next) => {
 
 export const getUserDashboard = async (req, res, next) => {
   try {
-    const userId = req.user?.id;
-    const user = await User.findById(userId);
-    if (!user) {
-      return next(createError(404, "User not found"));
+    const userId = req.user.id; // Extracting user ID from token payload
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return next(createError(400, "Invalid user ID"));
     }
 
-    const currentDateFormatted = new Date();
-    const startToday = new Date(
-      currentDateFormatted.getFullYear(),
-      currentDateFormatted.getMonth(),
-      currentDateFormatted.getDate()
-    );
-    const endToday = new Date(
-      currentDateFormatted.getFullYear(),
-      currentDateFormatted.getMonth(),
-      currentDateFormatted.getDate() + 1
-    );
+    const user = await User.findById(userId);
+    if (!user) return next(createError(404, "User not found"));
 
-    //calculte total calories burnt
-    const totalCaloriesBurnt = await Workout.aggregate([
-      { $match: { user: user._id, date: { $gte: startToday, $lt: endToday } } },
-      {
-        $group: {
-          _id: null,
-          totalCaloriesBurnt: { $sum: "$caloriesBurned" },
+    const currentDate = new Date();
+    const startToday = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 0, 0, 0);  // Normalize to start of day (midnight)
+    const endToday = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1, 0, 0, 0);  // Start of the next day
+
+    // Start of the week (7 days ago) - adjusted to include full range of last 7 days
+    const oneWeekAgo = new Date(currentDate);
+    oneWeekAgo.setDate(currentDate.getDate() - 6);  // Go 7 days back
+    oneWeekAgo.setHours(0, 0, 0, 0);  // Set the time to midnight of that day
+
+    // Using Promise.all to run all queries concurrently
+    const [totalCaloriesBurnt, totalWorkouts, categoryCalories, weeklyWorkouts] = await Promise.all([
+      // Total calories burned today
+      Workout.aggregate([
+        { $match: { user: user._id, date: { $gte: startToday, $lt: endToday } } },
+        { $group: { _id: null, totalCaloriesBurnt: { $sum: "$caloriesBurned" } } },
+      ]),
+
+      // Total workouts today
+      Workout.countDocuments({ user: userId, date: { $gte: startToday, $lt: endToday } }),
+
+      // Calories burned per category today
+      Workout.aggregate([
+        { $match: { user: user._id, date: { $gte: startToday, $lt: endToday } } },
+        { $group: { _id: "$category", totalCaloriesBurnt: { $sum: "$caloriesBurned" } } },
+      ]),
+
+      // Weekly calories burned (last 7 days)
+      Workout.aggregate([
+        { 
+          $match: { 
+            user: user._id, 
+            date: { $gte: oneWeekAgo } // Match any workout from the last 7 days
+          }
         },
-      },
+        { 
+          $project: {
+            dateString: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, // Format the date as YYYY-MM-DD
+            caloriesBurned: 1, // Include calories burned in the projection
+          }
+        },
+        { 
+          $group: {
+            _id: "$dateString", // Group by formatted date (YYYY-MM-DD)
+            totalCaloriesBurnt: { $sum: "$caloriesBurned" }, // Sum the calories burned for that day
+          }
+        },
+        { 
+          $sort: { _id: 1 } // Sort by date in descending order (most recent first)
+        }
+      ])
+      
+      ,
     ]);
 
-    //Calculate total no of workouts
-    const totalWorkouts = await Workout.countDocuments({
-      user: userId,
-      date: { $gte: startToday, $lt: endToday },
-    });
+    // Debugging the query results by logging
+    console.log("Total Calories Burnt:", totalCaloriesBurnt);
+    console.log("Total Workouts:", totalWorkouts);
+    console.log("Category Calories:", categoryCalories);
+    console.log("Weekly Workouts:", weeklyWorkouts);
 
-    //Calculate average calories burnt per workout
+    // Average calories burned per workout today
     const avgCaloriesBurntPerWorkout =
       totalCaloriesBurnt.length > 0
         ? totalCaloriesBurnt[0].totalCaloriesBurnt / totalWorkouts
         : 0;
 
-    // Fetch category of workouts
-    const categoryCalories = await Workout.aggregate([
-      { $match: { user: user._id, date: { $gte: startToday, $lt: endToday } } },
-      {
-        $group: {
-          _id: "$category",
-          totalCaloriesBurnt: { $sum: "$caloriesBurned" },
-        },
-      },
-    ]);
-
-    //Format category data for pie chart
-
+    // Prepare data for Pie chart (Calories by category)
     const pieChartData = categoryCalories.map((category, index) => ({
       id: index,
       value: category.totalCaloriesBurnt,
       label: category._id,
     }));
 
-    const weeks = [];
-    const caloriesBurnt = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(
-        currentDateFormatted.getTime() - i * 24 * 60 * 60 * 1000
-      );
-      weeks.push(`${date.getDate()}th`);
+    // Weekly calories burned (formatting it for the pie chart)
+    const weeklyCaloriesBurned = weeklyWorkouts.map((data, index) => ({
+      day: `Day ${index + 1}`, // Assign day numbers starting from "Day 1"
+      calories: data.totalCaloriesBurnt, // Total calories burned for that day
+    }));
+    
+    // Log the reshaped weekly calories burned
+    console.log("Weekly Calories Burned (Formatted):");
+    weeklyCaloriesBurned.forEach((entry) => {
+      console.log(`${entry.day}: ${entry.calories} calories`);
+    });
+    
+    // Sort the data in reverse chronological order (most recent first)
+    weeklyCaloriesBurned.sort((a, b) => new Date(b.day) - new Date(a.day)); // Sort by day number
+    
 
-      const startOfDay = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-      );
-      const endOfDay = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate() + 1
-      );
-
-      const weekData = await Workout.aggregate([
-        {
-          $match: {
-            user: user._id,
-            date: { $gte: startOfDay, $lt: endOfDay },
-          },
-        },
-        {
-          $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
-            totalCaloriesBurnt: { $sum: "$caloriesBurned" },
-          },
-        },
-        {
-          $sort: { _id: 1 }, // Sort by date in ascending order
-        },
-      ]);
-
-      caloriesBurnt.push(
-        weekData[0]?.totalCaloriesBurnt ? weekData[0]?.totalCaloriesBurnt : 0
-      );
+    // Check if data is being populated correctly
+    if (pieChartData.length === 0 || weeklyCaloriesBurned.length === 0) {
+      console.warn("Warning: Pie chart or weekly data is empty!");
     }
 
+    // Log weekly calories burned in reverse chronological order
+    console.log("Weekly Calories Burned (Most Recent First):");
+    weeklyCaloriesBurned.forEach((entry) => {
+      console.log(` ${entry.day}: ${entry.calories} calories`);
+    });
+
     return res.status(200).json({
-      totalCaloriesBurnt:
-        totalCaloriesBurnt.length > 0
-          ? totalCaloriesBurnt[0].totalCaloriesBurnt
-          : 0,
-      totalWorkouts: totalWorkouts,
-      avgCaloriesBurntPerWorkout: avgCaloriesBurntPerWorkout,
-      totalWeeksCaloriesBurnt: {
-        weeks: weeks,
-        caloriesBurned: caloriesBurnt,
-      },
-      pieChartData: pieChartData,
+      totalCaloriesBurnt: totalCaloriesBurnt.length > 0 ? totalCaloriesBurnt[0].totalCaloriesBurnt : 0,
+      totalWorkouts,
+      avgCaloriesBurntPerWorkout,
+      pieChartData,
+      weeklyCaloriesBurned, // This is now ready for the pie chart
     });
   } catch (err) {
+    console.error("Error in dashboard query:", err); // Log errors in the catch block
     next(err);
   }
 };
 
+
+
+
+
+
+
 export const getWorkoutsByDate = async (req, res, next) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user.id;
     const user = await User.findById(userId);
     let date = req.query.date ? new Date(req.query.date) : new Date();
+   
+
     if (!user) {
       return next(createError(404, "User not found"));
     }
-    const startOfDay = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    );
-    const endOfDay = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate() + 1
-    );
 
+    // Normalize the date to start at the beginning of the day (midnight)
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);  // Normalize to start of day (midnight)
+    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 0, 0, 0);  // Start of the next day
+
+    // Find all workouts for the user within the date range (from startOfDay to endOfDay)
     const todaysWorkouts = await Workout.find({
-      userId: userId,
+      user: userId,
       date: { $gte: startOfDay, $lt: endOfDay },
     });
+
+    // Calculate total calories burnt for the day
     const totalCaloriesBurnt = todaysWorkouts.reduce(
       (total, workout) => total + workout.caloriesBurned,
       0
     );
 
-    return res.status(200).json({ todaysWorkouts, totalCaloriesBurnt });
+    
+
+    // Send the response with today's workouts and total calories burnt
+    return res.status(200).json({
+      todaysWorkouts,
+      totalCaloriesBurnt,
+    });
   } catch (err) {
+    console.error("Error fetching workouts by date:", err);
     next(err);
   }
 };
+
+
 
 export const addWorkout = async (req, res, next) => {
   try {
-    const userId = req.user?.id;
-    const { workoutString } = req.body;
-    if (!workoutString) {
-      return next(createError(400, "Workout string is missing"));
-    }
-    // Split workoutString into lines
-    const eachworkout = workoutString.split(";").map((line) => line.trim());
-    // Check if any workouts start with "#" to indicate categories
-    const categories = eachworkout.filter((line) => line.startsWith("#"));
-    if (categories.length === 0) {
-      return next(createError(400, "No categories found in workout string"));
-    }
+    const userId = req.user.id;
 
-    const parsedWorkouts = [];
-    let currentCategory = "";
-    let count = 0;
+    if (userId) {
+      const { workoutString } = req.body;
+      if (!workoutString) {
+        return next(createError(400, "Workout string is missing"));
+      }
 
-    // Loop through each line to parse workout details
-    await eachworkout.forEach((line) => {
-      count++;
-      if (line.startsWith("#")) {
-        const parts = line?.split("\n").map((part) => part.trim());
-        console.log(parts);
-        if (parts.length < 5) {
-          return next(
-            createError(400, `Workout string is missing for ${count}th workout`)
+      // Split workoutString into lines
+      const eachworkout = workoutString.split(";").map((line) => line.trim());
+      const categories = eachworkout.filter((line) => line.startsWith("#"));
+      if (categories.length === 0) {
+        return next(createError(400, "No categories found in workout string"));
+      }
+
+      const parsedWorkouts = [];
+      let currentCategory = "";
+      let count = 0;
+
+      for (const line of eachworkout) {
+        count++;
+        if (line.startsWith("#")) {
+          const parts = line?.split("\n").map((part) => part.trim());
+          
+          if (parts.length < 5) {
+            return next(createError(400, `Workout string is missing for ${count}th workout`));
+          }
+
+          currentCategory = parts[0].substring(1).trim();
+          const workoutDetails = parseWorkoutLine(parts);
+          if (workoutDetails == null) {
+            return next(createError(400, "Please enter in proper format"));
+          }
+
+          // Check if any workout with the same category exists for the user
+          const existingWorkouts = await Workout.find({
+            user: userId,
+            category: currentCategory,
+          }).exec();
+
+          const existingWorkout = existingWorkouts.find(workout =>
+            workout.workoutName.toLowerCase() === workoutDetails.workoutName.toLowerCase()
           );
-        }
 
-        // Update current category
-        currentCategory = parts[0].substring(1).trim();
-        // Extract workout details
-        const workoutDetails = parseWorkoutLine(parts);
-        if (workoutDetails == null) {
-          return next(createError(400, "Please enter in proper format "));
-        }
+          if (existingWorkout) {
+            return next(createError(409, `A workout under the category ${currentCategory} with name ${workoutDetails.workoutName} already exists.`));
+          }
 
-        if (workoutDetails) {
-          // Add category to workout details
           workoutDetails.category = currentCategory;
           parsedWorkouts.push(workoutDetails);
+        } else {
+          return next(createError(400, `Workout string is missing for ${count}th workout`));
         }
-      } else {
-        return next(
-          createError(400, `Workout string is missing for ${count}th workout`)
-        );
       }
-    });
 
-    // Calculate calories burnt for each workout
-    await parsedWorkouts.forEach(async (workout) => {
-      workout.caloriesBurned = parseFloat(calculateCaloriesBurnt(workout));
-      await Workout.create({ ...workout, user: userId });
-    });
+      // Calculate calories burnt for each workout and save
+      await Promise.all(parsedWorkouts.map(async (workout) => {
+        workout.caloriesBurned = parseFloat(calculateCaloriesBurnt(workout));
+        try {
+          // Try inserting the workout, handle duplicate key error
+          await Workout.create({ ...workout, user: userId });
+        } catch (error) {
+          if (error.code === 11000) {
+            return next(createError(409, `A workout with the name ${workout.workoutName} already exists`));
+          } else {
+            throw error;  // Rethrow if the error is not a duplicate key error
+          }
+        }
+      }));
 
-    return res.status(201).json({
-      message: "Workouts added successfully",
-      workouts: parsedWorkouts,
-    });
+      return res.status(201).json({
+        message: "Workouts added successfully",
+        workouts: parsedWorkouts,
+      });
+    }
   } catch (err) {
     next(err);
   }
 };
+
 
 // Function to parse workout details from a line
 const parseWorkoutLine = (parts) => {
   const details = {};
-  console.log(parts);
+  
   if (parts.length >= 5) {
     details.workoutName = parts[1].substring(1).trim();
     details.sets = parseInt(parts[2].split("sets")[0].substring(1).trim());
@@ -305,7 +339,7 @@ const parseWorkoutLine = (parts) => {
     );
     details.weight = parseFloat(parts[3].split("kg")[0].substring(1).trim());
     details.duration = parseFloat(parts[4].split("min")[0].substring(1).trim());
-    console.log(details);
+    
     return details;
   }
   return null;

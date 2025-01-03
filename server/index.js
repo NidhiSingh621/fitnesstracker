@@ -4,7 +4,8 @@ import cors from "cors";
 import mongoose from "mongoose";
 import UserRoutes from "./routes/User.js";
 import router from "./routes/User.js";
-
+import path from 'path';
+import { verifyToken } from "./middleware/verifyToken.js";
 dotenv.config();
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
 
@@ -18,20 +19,12 @@ app.use(express.urlencoded({ extended: true })); // Fixed the typo "extented" â†
 
 
 // Routes
-app.get("/", async (req, res) => {
-  try {
-    res.status(200).json({
-      message: "Hi!",
-    });
-  } catch (err) {
-    res.status(500).json({
-      message: "An error occurred",
-      error: err.message,
-    });
-  }
-});
+// Middleware
+
 
 app.use("/api/user",UserRoutes);
+
+
 
 app.use((err,req,res,next) => {
   const status = err.status || 500;
